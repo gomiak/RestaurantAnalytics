@@ -3,7 +3,7 @@
 Aplicação desenvolvida para o desafio **God-Level Coder Challenge** da Nola.  
 Sistema de análise e visualização de indicadores de vendas de restaurantes, utilizando dados operacionais reais simulados (500k+ vendas).
 
-## 🏗️ Stack Tecnológico
+## Stack Tecnológico
 
 - **.NET 9**
 - **Blazor Server** (UI interativa em tempo real)
@@ -13,22 +13,23 @@ Sistema de análise e visualização de indicadores de vendas de restaurantes, u
 
 ---
 
-## 📦 Estrutura do Projeto
+## Estrutura do Projeto
 
+```plaintext
 RestaurantAnalytics/
 │
 ├── RestaurantAnalytics.Core
-│ ├── Entities # Modelos de domínio
-│ └── Interfaces # Contratos de repositórios e serviços
+│   ├── Entities              # Modelos de domínio (Store, Sale, ProductSale, etc.)
+│   └── Interfaces            # Contratos de repositórios
 │
 ├── RestaurantAnalytics.Application
-│ └── Services # Casos de uso, lógica de relatório
+│   └── Services              # Casos de uso, lógica de relatórios
 │
 ├── RestaurantAnalytics.Infrastructure
-│ ├── Database # Conexão, configuração
-│ └── Queries # Consultas otimizadas via Dapper
+│   ├── Database              # Conexão (Npgsql / Dapper)
+│   └── Queries               # Consultas SQL otimizadas
 │
 └── RestaurantAnalytics.Web
-├── Components
-├── Pages
-└── Program.cs # Blazor + MudBlazor
+    ├── Components            # Gráficos, filtros, tabelas
+    ├── Pages                 # Páginas
+    └── Program.cs            # Configuração Blazor + MudBlazor
