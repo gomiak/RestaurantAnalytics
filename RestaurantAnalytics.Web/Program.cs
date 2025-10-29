@@ -1,8 +1,12 @@
+using DotNetEnv;
 using MudBlazor.Services;
 using RestaurantAnalytics.Infrastructure;
 using RestaurantAnalytics.Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+builder.Configuration.AddEnvironmentVariables();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -10,7 +14,8 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddMudServices();
 
-var connectionString = builder.Configuration.GetConnectionString("Database");
+var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION")
+    ?? throw new Exception("DB_CONNECTION not found.");
 
 builder.Services.AddInfrastructure(connectionString);
 
