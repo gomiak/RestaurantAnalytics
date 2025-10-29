@@ -1,5 +1,5 @@
 using MudBlazor.Services;
-using Web.Mudblazor.Components;
+using RestaurantAnalytics.Web.Components;
 using DotNetEnv;
 using RestaurantAnalytics.Infrastructure;
 
