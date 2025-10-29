@@ -1,0 +1,88 @@
+﻿@page "/dashboard"
+
+@using RestaurantAnalytics.Core.Interfaces
+@inject ISalesRepository repository
+
+<MudPaper Class="doc-section-component-container">
+    <MudChart ChartType="ChartType.Line" ChartSeries="@_series" @bind-SelectedIndex="_index"
+              XAxisLabels="@_xAxisLabels" Width="@_width" Height="@_height"
+              ChartOptions="@_options" AxisChartOptions="@_axisChartOptions" />
+</MudPaper>
+
+<MudGrid>
+    <MudItem md="6" xs="12">
+        <MudText Typo="Typo.body1" Class="py-3">
+            Selected: @(_index < 0 ? "None" : _series[_index].Name)
+        </MudText>
+    </MudItem>
+
+    <MudItem md="6" xs="12">
+        <MudTextField @bind-Value="_width" Label="Chart Width" />
+    </MudItem>
+
+    <MudItem md="6" xs="12">
+        <MudCheckBox @bind-Value="_axisChartOptions.MatchBoundsToSize" Label="MatchBoundsToSize" />
+    </MudItem>
+
+    <MudItem md="6" xs="12">
+        <MudTextField @bind-Value="_height" Label="Chart Height" />
+    </MudItem>
+
+    <MudItem md="6" xs="12">
+        <MudCheckBox T="bool"
+                     ValueChanged="(v)=> { _series[0].LineDisplayType = v ? LineDisplayType.Area : LineDisplayType.Line; StateHasChanged(); }"
+                     Label="Faturamento como Área" />
+    </MudItem>
+
+    <MudItem md="6" xs="12">
+        <MudSlider @bind-Value="_options.LineStrokeWidth" Min="1" Max="10" />
+        Line Width: @_options.LineStrokeWidth
+    </MudItem>
+
+    <MudItem md="6" xs="12">
+        <MudStack>
+            <MudText Typo="Typo.body1">Rotação dos Labels do Eixo X</MudText>
+            <MudSlider @bind-Value="_axisChartOptions.XAxisLabelRotation" Min="0" Max="90" Step="15" />
+        </MudStack>
+    </MudItem>
+
+    <MudItem md="6" xs="12">
+        <MudCheckBox T="bool" ValueChanged="(v)=> { _series.ForEach(x => x.ShowDataMarkers = v); StateHasChanged(); }"
+                     Label="Mostrar Pontos" />
+    </MudItem>
+</MudGrid>
+
+@code {
+    private int _index = -1;
+    private ChartOptions _options = new();
+    private AxisChartOptions _axisChartOptions = new();
+    private string _width = "650px";
+    private string _height = "350px";
+
+    private List<ChartSeries> _series = new();
+    private string[] _xAxisLabels = Array.Empty<string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Define o intervalo — pode ajustar depois
+        var start = DateTime.UtcNow.AddDays(-30);
+        var end = DateTime.UtcNow;
+
+        // Chama o repositório (sua função)
+        var revenue = await repository.GetDailyRevenueAsync(start, end);
+
+        // Prepara labels e dados
+        _xAxisLabels = revenue.Keys
+            .Select(d => d.ToString("dd/MM"))
+            .ToArray();
+
+        _series = new List<ChartSeries>
+        {
+            new ChartSeries
+            {
+                Name = "Faturamento Diário",
+                Data = revenue.Values.Select(v => (double)v).ToArray()
+            }
+        };
+    }
+}
