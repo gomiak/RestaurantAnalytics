@@ -3,25 +3,16 @@
 @using RestaurantAnalytics.Core.Interfaces
 @inject ISalesRepository repository
 
-<MudPaper Class="doc-section-component-container">
+<MudPaper Class="pa-4">
     <MudChart ChartType="ChartType.Line" ChartSeries="@_series" @bind-SelectedIndex="_index"
-              XAxisLabels="@_xAxisLabels" Width="@_width" Height="@_height"
-              ChartOptions="@_options" AxisChartOptions="@_axisChartOptions" />
+    XAxisLabels="@_xAxisLabels" Width="@_width" Height="@_height"
+    ChartOptions="@_options" AxisChartOptions="@_axisChartOptions" />
 </MudPaper>
 
-<MudGrid>
-    <MudItem md="6" xs="12">
-        <MudText Typo="Typo.body1" Class="py-3">
-            Selected: @(_index < 0 ? "None" : _series[_index].Name)
-        </MudText>
-    </MudItem>
+<MudGrid Class="mt-4">
 
     <MudItem md="6" xs="12">
         <MudTextField @bind-Value="_width" Label="Chart Width" />
-    </MudItem>
-
-    <MudItem md="6" xs="12">
-        <MudCheckBox @bind-Value="_axisChartOptions.MatchBoundsToSize" Label="MatchBoundsToSize" />
     </MudItem>
 
     <MudItem md="6" xs="12">
@@ -52,10 +43,12 @@
     </MudItem>
 </MudGrid>
 
+
 @code {
     private int _index = -1;
     private ChartOptions _options = new();
-    private AxisChartOptions _axisChartOptions = new();
+    private AxisChartOptions _axisChartOptions = new() { 
+    MatchBoundsToSize = true};
     private string _width = "650px";
     private string _height = "350px";
 
@@ -64,25 +57,28 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Define o intervalo — pode ajustar depois
         var start = DateTime.UtcNow.AddDays(-30);
         var end = DateTime.UtcNow;
 
-        // Chama o repositório (sua função)
         var revenue = await repository.GetDailyRevenueAsync(start, end);
 
-        // Prepara labels e dados
+        // Labels espaçadas (mostra 1 a cada 3 dias)
         _xAxisLabels = revenue.Keys
-            .Select(d => d.ToString("dd/MM"))
+            .Select((date, index) => index % 3 == 0 ? date.ToString("dd/MM") : "")
             .ToArray();
 
+        // Ajusta largura automaticamente de acordo com número de pontos
+        _width = $"{Math.Max(650, revenue.Count * 25)}px";
+
+
         _series = new List<ChartSeries>
+    {
+        new ChartSeries
         {
-            new ChartSeries
-            {
-                Name = "Faturamento Diário",
-                Data = revenue.Values.Select(v => (double)v).ToArray()
-            }
-        };
+            Name = "Faturamento Diário",
+            Data = revenue.Values.Select(v => (double)v).ToArray()
+        }
+    };
     }
+
 }
