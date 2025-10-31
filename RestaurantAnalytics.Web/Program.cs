@@ -1,9 +1,9 @@
-using MudBlazor.Services;
-using RestaurantAnalytics.Web.Components;
 using DotNetEnv;
-using RestaurantAnalytics.Infrastructure;
+using MudBlazor.Services;
 using RestaurantAnalytics.Application.Services;
 using RestaurantAnalytics.Core.Interfaces;
+using RestaurantAnalytics.Infrastructure;
+using RestaurantAnalytics.Web.Components;
 
 var builder = WebApplication.CreateBuilder(args);
 

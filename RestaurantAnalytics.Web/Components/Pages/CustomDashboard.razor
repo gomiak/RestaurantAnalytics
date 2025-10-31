@@ -1,0 +1,243 @@
+﻿@page "/custom-dashboard"
+
+@using MudBlazor
+@using RestaurantAnalytics.Application.Analytics
+@using RestaurantAnalytics.Core.Interfaces
+@inject ISalesRepository Repository
+@inject IAiInsightsService AiInsightsService
+
+<MudPaper Class="pa-4">
+
+    <MudText Typo="Typo.h5" Class="mb-4">Criar Gráfico Personalizado</MudText>
+
+    <MudGrid GutterSize="3">
+
+        <MudItem xs="12" md="4">
+            <MudSelect T="string" Label="Métrica" @bind-Value="_selectedMetric">
+                @foreach (var m in AnalyticsCatalog.Metrics)
+                {
+                    <MudSelectItem Value="@m.Key">@m.Label</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <MudSelect T="string" Label="Agrupar Por" @bind-Value="_selectedDimension">
+                @foreach (var d in AnalyticsCatalog.Dimensions)
+                {
+                    <MudSelectItem Value="@d.Key">@d.Label</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <MudSelect T="ChartType" Label="Tipo de Gráfico" @bind-Value="_chartType">
+                <MudSelectItem Value="ChartType.Line">Linha</MudSelectItem>
+                <MudSelectItem Value="ChartType.Bar">Barra</MudSelectItem>
+                <MudSelectItem Value="ChartType.Pie">Pizza</MudSelectItem>
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudDateRangePicker Label="Período" @bind-DateRange="_dateRange" />
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudSelect T="int?" Label="Loja" @bind-Value="_selectedStoreId" Clearable="true">
+                <MudSelectItem Value="@((int?)null)">Todas</MudSelectItem>
+                @foreach (var s in _stores)
+                {
+                    <MudSelectItem T="int?" Value="@s.Id">@s.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudSelect T="int?" Label="Canal" @bind-Value="_selectedChannelId" Clearable="true">
+                <MudSelectItem Value="@((int?)null)">Todos</MudSelectItem>
+                @foreach (var c in _channels)
+                {
+                    <MudSelectItem T="int?" Value="@c.Id">@($"{(c.Type == "D" ? "Delivery" : "Presencial")} - {c.Name}")</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudAutocomplete T="ProductOption"
+                             Label="Produto"
+                             @bind-Value="_selectedProduct"
+                             SearchFunc="SearchProducts"
+                             ToStringFunc="p => p?.Name ?? string.Empty"
+                             Clearable="true"
+                             ResetValueOnEmptyText="true" />
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadChart">
+                Gerar Gráfico
+            </MudButton>
+        </MudItem>
+
+    </MudGrid>
+
+    @if (_chartSeries is not null)
+    {
+        <MudDivider Class="my-4" />
+
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudText Typo="Typo.h6">Resultado</MudText>
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ExplainChart">
+                Explicar gráfico
+            </MudButton>
+        </MudStack>
+
+        @if (!string.IsNullOrEmpty(_insight))
+        {
+            <MudAlert Severity="Severity.Info" Class="mt-2">
+                @_insight
+            </MudAlert>
+        }
+
+        <MudChart ChartType="@_chartType"
+                  ChartSeries="@_chartSeries"
+                  XAxisLabels="@_chartLabels"
+                  ChartOptions="@_chartOptions"
+                  Width="900px"
+                  Height="450px" />
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h6" Class="mb-2">Tabela de Valores</MudText>
+
+<MudTable T="(string Label, decimal Value)" Items="_tableData" Dense="true" Hover="true" Bordered="true">
+    <HeaderContent>
+        <MudTh>Label</MudTh>
+        <MudTh style="text-align:right;">Valor</MudTh>
+    </HeaderContent>
+
+    <RowTemplate>
+        <MudTd>@context.Label</MudTd>
+        <MudTd style="text-align:right;">@context.Value.ToString("C")</MudTd>
+    </RowTemplate>
+</MudTable>
+
+    }
+
+</MudPaper>
+
+@code {
+    public record ProductOption(int Id, string Name);
+
+    private string _selectedMetric = AnalyticsCatalog.Metrics.First().Key;
+    private string _selectedDimension = AnalyticsCatalog.Dimensions.First().Key;
+    private ChartType _chartType = ChartType.Bar;
+
+    private DateRange _dateRange = new(DateTime.UtcNow.AddDays(-30), DateTime.UtcNow);
+    private int? _selectedStoreId = null;
+    private int? _selectedChannelId = null;
+    private ProductOption? _selectedProduct = null;
+
+    private List<(int Id, string Name)> _stores = new();
+    private List<(int Id, string Name, string Type)> _channels = new();
+
+    private List<(string Label, decimal Value)> _tableData = new();
+    private List<ChartSeries>? _chartSeries;
+    private string[] _chartLabels = Array.Empty<string>();
+    private ChartOptions _chartOptions = new();
+    private string? _insight;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _stores = (await Repository.GetStoresAsync()).ToList();
+        _channels = (await Repository.GetChannelsAsync()).ToList();
+    }
+
+    private async Task<IEnumerable<ProductOption>> SearchProducts(string value, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return Enumerable.Empty<ProductOption>();
+
+        var result = await Repository.SearchProductsAsync(value);
+        return result.Select(p => new ProductOption(p.Id, p.Name));
+    }
+
+    private async Task LoadChart()
+    {
+        _insight = null;
+
+        if (string.IsNullOrEmpty(_selectedMetric) || string.IsNullOrEmpty(_selectedDimension))
+            return;
+
+        var metric = AnalyticsCatalog.Metrics.First(m => m.Key == _selectedMetric);
+        var dimension = AnalyticsCatalog.Dimensions.First(d => d.Key == _selectedDimension);
+
+        var start = _dateRange.Start ?? DateTime.UtcNow.AddDays(-30);
+        var end = _dateRange.End ?? DateTime.UtcNow;
+
+        var result = (await Repository.RunCustomQueryAsync(
+            metric, dimension, start, end,
+            _selectedStoreId, _selectedChannelId, _selectedProduct?.Id
+        )).ToList();
+
+        _tableData = result;
+
+        var labelsList = result.Select(r => r.Label).ToList();
+
+        const int maxLabels = 12;
+        if (labelsList.Count > maxLabels)
+        {
+            double step = (double)labelsList.Count / maxLabels;
+            _chartLabels = labelsList.Select((v, i) => i % (int)Math.Ceiling(step) == 0 ? v : "").ToArray();
+        }
+        else
+        {
+            _chartLabels = labelsList.ToArray();
+        }
+
+        var rawValues = result.Select(r => (double)r.Value).ToArray();
+
+        if (!rawValues.Any())
+        {
+            _chartSeries = null;
+            _chartOptions = new ChartOptions();
+            return;
+        }
+
+        bool useK = rawValues.Count(v => v >= 1000) > rawValues.Length / 2;
+        double divisor = useK ? 1000.0 : 1.0;
+        string suffix = useK ? " (K)" : "";
+
+        var scaled = rawValues.Select(v => v / divisor).ToArray();
+
+        _chartOptions = new ChartOptions
+        {
+            YAxisFormat = useK ? "0.#K" : "0.##",
+            YAxisTicks = 5
+        };
+
+        _chartSeries = new()
+        {
+            new ChartSeries
+            {
+                Name = metric.Label + suffix,
+                Data = scaled,
+                ShowDataMarkers = scaled.Length <= 50
+            }
+        };
+    }
+
+    private async Task ExplainChart()
+    {
+        if (_tableData is null || !_tableData.Any())
+            return;
+
+        var metric = AnalyticsCatalog.Metrics.FirstOrDefault(m => m.Key == _selectedMetric);
+        var dimension = AnalyticsCatalog.Dimensions.FirstOrDefault(d => d.Key == _selectedDimension);
+
+        string metricLabel = metric?.Label ?? "Métrica";
+        string dimensionLabel = dimension?.Label ?? "Dimensão";
+
+        _insight = await AiInsightsService.GenerateLabelValueInsightAsync(
+            _tableData, metricLabel, dimensionLabel);
+    }
+}

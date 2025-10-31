@@ -1,11 +1,6 @@
-﻿using System.Net.Http;
-using System.Net.Http.Json;
+﻿using Microsoft.Extensions.Configuration;
 using RestaurantAnalytics.Core.Interfaces;
-using Microsoft.Extensions.Configuration;
-using System.Net;
-using System.Runtime.Intrinsics.X86;
-using System.Drawing;
-using System.Runtime.ConstrainedExecution;
+using System.Net.Http.Json;
 
 namespace RestaurantAnalytics.Application.Services;
 
@@ -101,12 +96,40 @@ Responda em português simples, em até 3 frases curtas, como se estivesse conve
         }
     }
 
+    public async Task<string> GenerateLabelValueInsightAsync(
+    IEnumerable<(string Label, decimal Value)> data,
+    string metricLabel,
+    string dimensionLabel,
+    CancellationToken ct = default)
+    {
+        var rows = data.ToList();
+        if (!rows.Any())
+            return "Sem dados para gerar explicação.";
 
+        var linhas = string.Join("\n", rows.Select(x => $"{x.Label} = {x.Value}"));
 
+        var prompt = $@"
+Você é um consultor financeiro explicando dados para o dono de um restaurante (sem jargões).
 
+Você recebeu uma série de valores de ""{metricLabel}"" agrupados por ""{dimensionLabel}"":
 
+{linhas}
 
+Regras de formatação:
+- Sempre use R$ antes de valores.
+- Formate de forma curta e amigável:
+  - R$ 1.200 → R$ 1,2 mil
+  - R$ 450.000 → R$ 450 mil
+  - R$ 1.500.000 → R$ 1,5 milhão
+- Cite picos (maior valor) e vales (menor valor) quando fizer sentido.
+- Se houver uma tendência clara no início vs fim, indique variação aproximada (%).
+- Explique em tom simples e direto, como se fosse para o dono do restaurante.
 
+Responda em até 3 frases curtas, em português claro.
+";
+
+        return await CallLlamaAsync(prompt, ct);
+    }
 
 
 

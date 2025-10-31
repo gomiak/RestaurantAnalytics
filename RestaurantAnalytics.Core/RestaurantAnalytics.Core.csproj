@@ -6,10 +6,4 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Folder Include="Repositories\Channels\" />
-    <Folder Include="Repositories\Stores\" />
-    <Folder Include="Repositories\Products\" />
-  </ItemGroup>
-
 </Project>

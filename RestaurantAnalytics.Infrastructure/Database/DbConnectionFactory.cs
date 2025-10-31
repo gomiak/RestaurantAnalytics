@@ -1,5 +1,5 @@
-﻿using System.Data;
-using Npgsql;
+﻿using Npgsql;
+using System.Data;
 
 namespace RestaurantAnalytics.Infrastructure.Database;
 
