@@ -1,0 +1,20 @@
+﻿@using MudBlazor
+
+<MudPaper Class="pa-3" Elevation="4" Style="position: relative; min-height:260px;">
+    <MudText Typo="Typo.h6">@Title</MudText>
+
+    <div class="mt-4">
+        @ChildContent
+    </div>
+
+    <MudIconButton Icon="@Icons.Material.Filled.OpenInFull"
+                   Color="Color.Primary"
+                   Style="position:absolute; top:8px; right:8px;"
+                   OnClick="OnExpand" />
+</MudPaper>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public RenderFragment ChildContent { get; set; } = default!;
+    [Parameter] public EventCallback OnExpand { get; set; }
+}

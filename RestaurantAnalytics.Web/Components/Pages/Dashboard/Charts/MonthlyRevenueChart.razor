@@ -1,0 +1,51 @@
+﻿@using RestaurantAnalytics.Core.Interfaces
+@using Components.Pages.Dashboard.Charts
+@inject ISalesRepository Repository
+
+<MudCard Class="pa-4">
+    <MudText Typo="Typo.h6">Faturamento Mensal</MudText>
+
+    <MudChart ChartType="ChartType.Bar"
+              ChartSeries="@_series"
+              XAxisLabels="@_labels"
+              Width="650px"
+              Height="350px"
+              ChartOptions="@_options" />
+
+    <InsightBox Data="@_revenueDict" />
+</MudCard>
+
+@code {
+    private List<ChartSeries> _series = new();
+    private string[] _labels = Array.Empty<string>();
+    private ChartOptions _options = new() { YAxisFormat = "0.#K" };
+
+    private Dictionary<DateTime, decimal> _revenueDict = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var start = DateTime.UtcNow.AddDays(-90);
+        var end = DateTime.UtcNow;
+
+        var sales = await Repository.GetSalesByDateRangeAsync(start, end);
+
+        var grouped = sales
+            .GroupBy(s => new { s.CreatedAt.Year, s.CreatedAt.Month })
+            .Select(g => new { Label = $"{g.Key.Month:D2}/{g.Key.Year}", Total = g.Sum(x => x.TotalAmount) })
+            .OrderBy(x => x.Label)
+            .ToList();
+
+        _labels = grouped.Select(x => x.Label).ToArray();
+        _series = new()
+        {
+            new ChartSeries { Name = "Faturamento (K)", Data = grouped.Select(x => (double)x.Total / 1000).ToArray() }
+        };
+
+
+        _revenueDict = grouped
+            .ToDictionary(
+                x => new DateTime(int.Parse(x.Label.Split('/')[1]), int.Parse(x.Label.Split('/')[0]), 1),
+                x => x.Total
+            );
+    }
+}

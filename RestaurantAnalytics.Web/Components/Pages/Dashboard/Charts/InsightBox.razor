@@ -1,0 +1,40 @@
+﻿@using RestaurantAnalytics.Core.Interfaces
+@inject IAiInsightsService AiInsightsService
+
+<div class="mt-2">
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate Color="Color.Info" Class="mb-2" />
+    }
+
+    <MudButton Variant="Variant.Outlined"
+               Color="Color.Info"
+               OnClick="GenerateInsight"
+               Disabled="@_loading">
+        Explicar Gráfico
+    </MudButton>
+
+    @if (_insight is not null)
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-2">
+            @_insight
+        </MudAlert>
+    }
+</div>
+
+@code {
+    [Parameter] public Dictionary<DateTime, decimal>? Data { get; set; }
+
+    private string? _insight;
+    private bool _loading = false;
+
+    private async Task GenerateInsight()
+    {
+        if (Data is null || Data.Count == 0) return;
+
+        _loading = true;
+        _insight = await AiInsightsService.GenerateTrendInsightAsync(Data);
+        _loading = false;
+    }
+}

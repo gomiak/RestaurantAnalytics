@@ -1,0 +1,14 @@
+﻿@page "/dashboard"
+@using RestaurantAnalytics.Web.Components.Pages.Dashboard.Charts
+
+<MudGrid GutterSize="3">
+
+    <MudItem xs="12" md="6">
+        <DailyRevenueChart />
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <MonthlyRevenueChart />
+    </MudItem>
+
+</MudGrid>

@@ -2,8 +2,15 @@ using MudBlazor.Services;
 using RestaurantAnalytics.Web.Components;
 using DotNetEnv;
 using RestaurantAnalytics.Infrastructure;
+using RestaurantAnalytics.Application.Services;
+using RestaurantAnalytics.Core.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IAiInsightsService, AiInsightsService>();
+
+
 
 // Add MudBlazor services
 builder.Services.AddMudServices();
