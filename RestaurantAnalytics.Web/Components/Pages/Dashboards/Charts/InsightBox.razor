@@ -24,17 +24,32 @@
 </div>
 
 @code {
-    [Parameter] public Dictionary<DateTime, decimal>? Data { get; set; }
+    [Parameter] public IDictionary<object, decimal>? Data { get; set; }
 
     private string? _insight;
     private bool _loading = false;
 
     private async Task GenerateInsight()
     {
-        if (Data is null || Data.Count == 0) return;
+        if (Data is null || Data.Count == 0)
+            return;
 
         _loading = true;
-        _insight = await AiInsightsService.GenerateTrendInsightAsync(Data);
-        _loading = false;
+
+        try
+        {
+            // ✅ Converte qualquer tipo de chave para string
+            var normalized = Data.ToDictionary(
+                x => x.Key.ToString() ?? "",
+                x => x.Value
+            );
+
+            // ✅ Sempre usa IA agora
+            _insight = await AiInsightsService.GenerateTrendInsightAsync(normalized);
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 }

@@ -11,12 +11,22 @@
 
 
   <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.0" />
     <PackageReference Include="DotNetEnv" Version="3.1.1" />
     <PackageReference Include="MudBlazor" Version="8.*" />
+	  <None Include="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
+	  <PackageReference Include="QuestPDF" Version="2025.7.4" />
   </ItemGroup>
 
 
   <ItemGroup>
-    <ProjectReference Include="..\RestaurantAnalytics.Infrastructure\RestaurantAnalytics.Infrastructure.csproj" />
+
+	  <ProjectReference Include="..\RestaurantAnalytics.Infrastructure\RestaurantAnalytics.Infrastructure.csproj" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <Folder Include="Components\Dashboard\" />
+    <Folder Include="wwwroot\js\" />
   </ItemGroup>
 </Project>

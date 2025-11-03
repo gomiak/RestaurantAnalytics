@@ -4,9 +4,10 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <base href="/" />  
-    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
+    <base href="/" />
+    <link href="https:fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
     <link href=@Assets["_content/MudBlazor/MudBlazor.min.css"] rel="stylesheet" />
+
     <ImportMap />
     <link rel="icon" type="image/ico" href="favicon.ico" />
     <HeadOutlet @rendermode="InteractiveServer" />
@@ -16,6 +17,72 @@
     <Routes @rendermode="InteractiveServer" />
     <script src="_framework/blazor.web.js"></script>
     <script src=@Assets["_content/MudBlazor/MudBlazor.min.js"]></script>
+
+   
+    <script>
+        window.downloadFileFromBase64 = (base64, filename) => {
+            const link = document.createElement("a");
+            link.href = "data:application/octet-stream;base64," + base64;
+            link.download = filename;
+            link.click();
+        };
+    </script>
+    <script>
+        window.getChartBase64 = (selector) => {
+            const canvas = document.querySelector(selector + " canvas");
+            if (!canvas) return null;
+            return canvas.toDataURL("image/png");
+        };
+
+        window.downloadFileFromBase64 = (base64, filename) => {
+            const link = document.createElement("a");
+            link.href = "data:application/pdf;base64," + base64;
+            link.download = filename;
+            link.click();
+        };
+    </script>
+    <script src="https:cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https:cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <script>
+        window.exportCustomDashboardPdfWithFilters = async function (
+            elementId, metric, dimension, store, channel, product, startDate, endDate
+        ) {
+            const { jsPDF } = window.jspdf;
+
+            const area = document.getElementById(elementId);
+            if (!area) return;
+
+            const canvas = await html2canvas(area, { scale: 2 });
+            const img = canvas.toDataURL("image/png");
+
+            const pdf = new jsPDF("p", "mm", "a4");
+            const width = pdf.internal.pageSize.getWidth();
+
+            pdf.setFontSize(16);
+            pdf.text("Relatório Personalizado", width / 2, 15, { align: "center" });
+
+            pdf.setFontSize(10);
+            pdf.text(`Métrica: ${metric}`, 10, 25);
+            pdf.text(`Agrupado por: ${dimension}`, 10, 30);
+            pdf.text(`Loja: ${store}`, 10, 35);
+            pdf.text(`Canal: ${channel}`, 10, 40);
+            pdf.text(`Produto: ${product}`, 10, 45);
+            pdf.text(`Período: ${startDate} até ${endDate}`, 10, 50);
+
+            const imgY = 60;
+            const imgHeight = (canvas.height * width) / canvas.width;
+            pdf.addImage(img, "PNG", 0, imgY, width, imgHeight);
+
+            pdf.save("relatorio.pdf");
+        };
+    </script>
+
+
+
+
+
+
 </body>
 
 </html>

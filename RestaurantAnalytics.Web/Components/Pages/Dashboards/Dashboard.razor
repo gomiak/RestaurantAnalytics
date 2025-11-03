@@ -1,0 +1,35 @@
+﻿@page "/"
+@attribute [Authorize]
+
+@using Components.Pages.Dashboards.Charts
+@using Microsoft.AspNetCore.Authorization
+@using RestaurantAnalytics.Web.Components.Pages.Dashboards.Charts
+
+<MudGrid GutterSize="3">
+
+    <MudItem xs="12" md="6" Class="h-100">
+        <DailyRevenueChart />
+    </MudItem>
+
+    <MudItem xs="12" md="6" Class="h-100">
+        <MonthlyRevenueChart />
+    </MudItem>
+
+    <MudItem xs="12" md="6" Class="h-100">
+        <TopChannelsByValueChart />
+    </MudItem>
+
+    <MudItem xs="12" md="6" Class="h-100">
+        <TopChannelsByQuantityChart />
+    </MudItem>
+
+    <MudItem xs="12">
+        <TopProductsByQuantityChart />
+    </MudItem>
+
+    <MudItem xs="12">
+        <TopProductsByValueChart />
+    </MudItem>
+
+
+</MudGrid>

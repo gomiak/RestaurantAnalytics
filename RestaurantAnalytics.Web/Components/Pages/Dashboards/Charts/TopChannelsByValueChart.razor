@@ -1,0 +1,54 @@
+﻿@using RestaurantAnalytics.Core.Interfaces
+@inject ISalesRepository Repository
+
+<MudCard Class="pa-4 h-100 d-flex flex-column">
+    <MudText Typo="Typo.h6">Top Canais por Faturamento (30 dias)</MudText>
+
+    @if (_series is null)
+    {
+        <MudProgressCircular Indeterminate Class="mt-4" />
+    }
+    else
+    {
+        <MudChart ChartType="ChartType.Bar"
+                  ChartSeries="@_series"
+                  XAxisLabels="@_labels"
+                  Width="100%"
+                  Height="400px"
+                  ChartOptions="@_options"
+                  AxisChartOptions="@_axisOptions" />
+
+        <!-- ✅ InsightBox agora funcionando com chave string -->
+        <InsightBox Data="@_insightsData.ToDictionary(x => (object)x.Key, x => x.Value)" />
+    }
+</MudCard>
+
+@code {
+    private string[] _labels = Array.Empty<string>();
+    private List<ChartSeries>? _series;
+    private ChartOptions _options = new() { YAxisFormat = "0.#K" };
+    private AxisChartOptions _axisOptions = new() {MatchBoundsToSize = true };
+
+    private Dictionary<string, decimal> _insightsData = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var start = DateTime.UtcNow.AddDays(-30);
+        var end = DateTime.UtcNow;
+
+        var data = await Repository.GetTopChannelsByValueAsync(start, end);
+        var list = data.ToList();
+
+        _labels = list.Select(x => x.ChannelName).ToArray();
+        _series = new()
+        {
+            new ChartSeries
+            {
+                Name = "Faturamento (K)",
+                Data = list.Select(x => (double)x.TotalRevenue / 1000).ToArray()
+            }
+        };
+
+        _insightsData = list.ToDictionary(x => x.ChannelName, x => x.TotalRevenue);
+    }
+}

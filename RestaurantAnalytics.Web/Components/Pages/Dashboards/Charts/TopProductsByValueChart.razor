@@ -1,0 +1,69 @@
+﻿@using RestaurantAnalytics.Core.Interfaces
+@using Components.Pages.Dashboards.Charts
+@inject ISalesRepository Repository
+
+<MudCard Class="pa-4 h-100 d-flex flex-column">
+    <MudText Typo="Typo.h6">Top Produtos por Faturamento (30 dias)</MudText>
+
+    @if (_series is null)
+    {
+        <MudProgressCircular Indeterminate Class="mt-4" />
+    }
+    else
+    {
+        <MudChart ChartType="ChartType.Bar"
+                  ChartSeries="@_series"
+                  XAxisLabels="@_labels"
+                  Width="100%"
+                  Height="600px"
+                  ChartOptions="@_options"
+                  AxisChartOptions="@_axisOptions" />
+
+        <InsightBox Data="@_insightsData.ToDictionary(x => (object)x.Key, x => x.Value)" />
+    }
+</MudCard>
+
+@code {
+    private string[] _labels = Array.Empty<string>();
+    private List<ChartSeries>? _series;
+    private ChartOptions _options = new() { YAxisFormat = "0.#K" };
+
+    private AxisChartOptions _axisOptions = new()
+        {
+            MatchBoundsToSize = true
+        };
+
+    private Dictionary<string, decimal> _insightsData = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var start = DateTime.UtcNow.AddDays(-30);
+        var end = DateTime.UtcNow;
+
+        var data = await Repository.GetTopProductsByValueAsync(start, end);
+        var list = data.ToList();
+
+        _labels = list.Select(x => BreakLabel(x.ProductName, 12)).ToArray();
+
+        _series = new()
+        {
+            new ChartSeries
+            {
+                Name = "Faturamento (K)",
+                Data = list.Select(x => (double)x.TotalSold / 1000).ToArray()
+            }
+        };
+
+        _insightsData = list.ToDictionary(x => x.ProductName, x => x.TotalSold);
+    }
+
+    private static string BreakLabel(string text, int maxLen)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return text;
+
+        var parts = Enumerable.Range(0, (text.Length + maxLen - 1) / maxLen)
+            .Select(i => text.Substring(i * maxLen, Math.Min(maxLen, text.Length - i * maxLen)));
+
+        return string.Join("\n", parts);
+    }
+}

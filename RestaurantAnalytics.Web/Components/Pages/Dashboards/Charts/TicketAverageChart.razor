@@ -1,0 +1,32 @@
+﻿@using RestaurantAnalytics.Core.Interfaces
+@inject ISalesRepository Repository
+
+<MudCard Class="pa-4 d-flex flex-column align-center">
+    <MudText Typo="Typo.h6">Ticket Médio (últimos 30 dias)</MudText>
+
+    @if (!_loaded)
+    {
+        <MudProgressCircular Indeterminate Class="mt-4" />
+    }
+    else
+    {
+        <MudText Typo="Typo.h4" Color="Color.Primary">
+            R$ @Ticket.ToString("N2")
+        </MudText>
+    }
+</MudCard>
+
+@code {
+    private bool _loaded = false;
+    private decimal Ticket;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var start = DateTime.UtcNow.AddDays(-30);
+        var end = DateTime.UtcNow;
+
+        Ticket = await Repository.GetAverageTicketAsync(start, end);
+        _loaded = true;
+        StateHasChanged();
+    }
+}

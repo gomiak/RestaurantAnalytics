@@ -1,0 +1,34 @@
+﻿@page "/login"
+@using RestaurantAnalytics.Web.Auth
+@inject NavigationManager Nav
+@inject SimpleAuthStateProvider Auth
+
+<MudPaper Class="pa-6 mx-auto" Style="max-width:400px;">
+    <MudText Typo="Typo.h5" Class="mb-4">Login</MudText>
+
+    <MudTextField @bind-Value="_user" Label="Usuário" />
+    <MudTextField @bind-Value="_pass" Label="Senha" InputType="InputType.Password" Class="mt-2" />
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-4" OnClick="Submit">
+        Entrar
+    </MudButton>
+
+    @if (_error != null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mt-3">@_error</MudAlert>
+    }
+</MudPaper>
+
+@code {
+    string _user = "";
+    string _pass = "";
+    string? _error;
+
+    async Task Submit()
+    {
+        if (await Auth.LoginAsync(_user, _pass))
+            Nav.NavigateTo("/");
+        else
+            _error = "Credenciais inválidas.";
+    }
+}

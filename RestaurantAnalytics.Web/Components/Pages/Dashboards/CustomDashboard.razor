@@ -1,10 +1,13 @@
 ﻿@page "/custom-dashboard"
+@attribute [Authorize]
 
+@using Microsoft.AspNetCore.Authorization
 @using MudBlazor
 @using RestaurantAnalytics.Application.Analytics
 @using RestaurantAnalytics.Core.Interfaces
 @inject ISalesRepository Repository
 @inject IAiInsightsService AiInsightsService
+@inject IJSRuntime JS
 
 <MudPaper Class="pa-4">
 
@@ -86,8 +89,17 @@
 
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
             <MudText Typo="Typo.h6">Resultado</MudText>
+
             <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ExplainChart">
                 Explicar gráfico
+            </MudButton>
+
+            <MudButton Variant="Variant.Outlined" Color="Color.Info" OnClick="ExportExcel">
+                Exportar Excel
+            </MudButton>
+
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="ExportPdf">
+                Exportar PDF
             </MudButton>
         </MudStack>
 
@@ -98,29 +110,30 @@
             </MudAlert>
         }
 
-        <MudChart ChartType="@_chartType"
-                  ChartSeries="@_chartSeries"
-                  XAxisLabels="@_chartLabels"
-                  ChartOptions="@_chartOptions"
-                  Width="900px"
-                  Height="450px" />
+        <div id="export-area">
+            <MudChart ChartType="@_chartType"
+                      ChartSeries="@_chartSeries"
+                      XAxisLabels="@_chartLabels"
+                      ChartOptions="@_chartOptions"
+                      Width="900px"
+                      Height="450px" />
 
-        <MudDivider Class="my-4" />
+            <MudDivider Class="my-4" />
 
-        <MudText Typo="Typo.h6" Class="mb-2">Tabela de Valores</MudText>
+            <MudText Typo="Typo.h6" Class="mb-2">Tabela de Valores</MudText>
 
-<MudTable T="(string Label, decimal Value)" Items="_tableData" Dense="true" Hover="true" Bordered="true">
-    <HeaderContent>
-        <MudTh>Label</MudTh>
-        <MudTh style="text-align:right;">Valor</MudTh>
-    </HeaderContent>
+            <MudTable T="(string Label, decimal Value)" Items="_tableData" Dense="true" Hover="true" Bordered="true">
+                <HeaderContent>
+                    <MudTh>Label</MudTh>
+                    <MudTh style="text-align:right;">Valor</MudTh>
+                </HeaderContent>
 
-    <RowTemplate>
-        <MudTd>@context.Label</MudTd>
-        <MudTd style="text-align:right;">@context.Value.ToString("C")</MudTd>
-    </RowTemplate>
-</MudTable>
-
+                <RowTemplate>
+                    <MudTd>@context.Label</MudTd>
+                    <MudTd style="text-align:right;">@context.Value.ToString("C")</MudTd>
+                </RowTemplate>
+            </MudTable>
+        </div>
     }
 
 </MudPaper>
@@ -156,7 +169,6 @@
     {
         if (string.IsNullOrWhiteSpace(value))
             return Enumerable.Empty<ProductOption>();
-
         var result = await Repository.SearchProductsAsync(value);
         return result.Select(p => new ProductOption(p.Id, p.Name));
     }
@@ -164,9 +176,6 @@
     private async Task LoadChart()
     {
         _insight = null;
-
-        if (string.IsNullOrEmpty(_selectedMetric) || string.IsNullOrEmpty(_selectedDimension))
-            return;
 
         var metric = AnalyticsCatalog.Metrics.First(m => m.Key == _selectedMetric);
         var dimension = AnalyticsCatalog.Dimensions.First(d => d.Key == _selectedDimension);
@@ -182,17 +191,10 @@
         _tableData = result;
 
         var labelsList = result.Select(r => r.Label).ToList();
-
         const int maxLabels = 12;
-        if (labelsList.Count > maxLabels)
-        {
-            double step = (double)labelsList.Count / maxLabels;
-            _chartLabels = labelsList.Select((v, i) => i % (int)Math.Ceiling(step) == 0 ? v : "").ToArray();
-        }
-        else
-        {
-            _chartLabels = labelsList.ToArray();
-        }
+        _chartLabels = labelsList.Count > maxLabels
+            ? labelsList.Select((v, i) => i % (int)Math.Ceiling((double)labelsList.Count / maxLabels) == 0 ? v : "").ToArray()
+            : labelsList.ToArray();
 
         var rawValues = result.Select(r => (double)r.Value).ToArray();
 
@@ -203,17 +205,16 @@
             return;
         }
 
-        bool useK = rawValues.Count(v => v >= 1000) > rawValues.Length / 2;
+        bool useK = rawValues.Any(v => v >= 1000);
         double divisor = useK ? 1000.0 : 1.0;
         string suffix = useK ? " (K)" : "";
-
         var scaled = rawValues.Select(v => v / divisor).ToArray();
 
         _chartOptions = new ChartOptions
-        {
-            YAxisFormat = useK ? "0.#K" : "0.##",
-            YAxisTicks = 5
-        };
+            {
+                YAxisFormat = useK ? "0.#K" : "0.##",
+                YAxisTicks = 5
+            };
 
         _chartSeries = new()
         {
@@ -228,16 +229,54 @@
 
     private async Task ExplainChart()
     {
+        if (!_tableData.Any())
+            return;
+
+        var metric = AnalyticsCatalog.Metrics.First(m => m.Key == _selectedMetric);
+        var dimension = AnalyticsCatalog.Dimensions.First(d => d.Key == _selectedDimension);
+
+        _insight = await AiInsightsService.GenerateLabelValueInsightAsync(
+            _tableData, metric.Label, dimension.Label);
+    }
+
+    private async Task ExportExcel()
+    {
         if (_tableData is null || !_tableData.Any())
             return;
 
-        var metric = AnalyticsCatalog.Metrics.FirstOrDefault(m => m.Key == _selectedMetric);
-        var dimension = AnalyticsCatalog.Dimensions.FirstOrDefault(d => d.Key == _selectedDimension);
+        using var workbook = new ClosedXML.Excel.XLWorkbook();
+        var sheet = workbook.AddWorksheet("Dados");
 
-        string metricLabel = metric?.Label ?? "Métrica";
-        string dimensionLabel = dimension?.Label ?? "Dimensão";
+        sheet.Cell(1, 1).Value = "Label";
+        sheet.Cell(1, 2).Value = "Valor";
 
-        _insight = await AiInsightsService.GenerateLabelValueInsightAsync(
-            _tableData, metricLabel, dimensionLabel);
+        for (int i = 0; i < _tableData.Count; i++)
+        {
+            sheet.Cell(i + 2, 1).Value = _tableData[i].Label;
+            sheet.Cell(i + 2, 2).Value = _tableData[i].Value;
+        }
+
+        sheet.Columns().AdjustToContents();
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Position = 0;
+
+        var base64 = Convert.ToBase64String(stream.ToArray());
+        await JS.InvokeVoidAsync("downloadFileFromBase64", base64, "relatorio.xlsx");
+    }
+
+    private async Task ExportPdf()
+    {
+        await JS.InvokeVoidAsync("exportCustomDashboardPdfWithFilters",
+            "export-area",
+            _selectedMetric,
+            _selectedDimension,
+            _selectedStoreId.HasValue ? _stores.First(s => s.Id == _selectedStoreId.Value).Name : "Todas",
+            _selectedChannelId.HasValue ? _channels.First(c => c.Id == _selectedChannelId.Value).Name : "Todos",
+            _selectedProduct?.Name ?? "Todos",
+            _dateRange.Start?.ToString("dd/MM/yyyy") ?? "",
+            _dateRange.End?.ToString("dd/MM/yyyy") ?? ""
+        );
     }
 }
