@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using RestaurantAnalytics.Core.Interfaces;
 using RestaurantAnalytics.Infrastructure.Database;
-using RestaurantAnalytics.Infrastructure.Repositories.Sales;
+using RestaurantAnalytics.Infrastructure.Repositories;
 
 namespace RestaurantAnalytics.Infrastructure;
 

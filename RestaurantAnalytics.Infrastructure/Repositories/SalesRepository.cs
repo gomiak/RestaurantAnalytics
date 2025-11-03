@@ -4,7 +4,7 @@ using RestaurantAnalytics.Core.Entities.Sales;
 using RestaurantAnalytics.Core.Interfaces;
 using RestaurantAnalytics.Infrastructure.Database;
 
-namespace RestaurantAnalytics.Infrastructure.Repositories.Sales;
+namespace RestaurantAnalytics.Infrastructure.Repositories;
 
 public class SalesRepository : ISalesRepository
 {
@@ -80,6 +80,89 @@ public class SalesRepository : ISalesRepository
         return await conn.QueryAsync<(int Id, string Name)>(sql);
     }
 
+    public async Task<IEnumerable<(string ProductName, double QuantitySold)>> GetTopProductsByQuantityAsync(DateTime start, DateTime end)
+    {
+        using var conn = await _factory.CreateConnectionAsync();
+
+        var sql = @"
+        SELECT 
+            p.name AS ProductName,
+            SUM(ps.quantity) AS QuantitySold
+        FROM sales s
+        INNER JOIN product_sales ps ON ps.sale_id = s.id
+        INNER JOIN products p ON p.id = ps.product_id
+        WHERE s.sale_status_desc = 'COMPLETED'
+        AND s.created_at BETWEEN @start AND @end
+        GROUP BY p.name
+        ORDER BY QuantitySold DESC
+        LIMIT 10;
+    ";
+
+        return await conn.QueryAsync<(string ProductName, double QuantitySold)>(sql, new { start, end });
+    }
+
+    public async Task<IEnumerable<(string ProductName, decimal TotalSold)>> GetTopProductsByValueAsync(DateTime start, DateTime end)
+    {
+        using var conn = await _factory.CreateConnectionAsync();
+
+        var sql = @"
+        SELECT 
+            p.name AS ProductName,
+            SUM(ps.total_price) AS TotalSold
+        FROM sales s
+        INNER JOIN product_sales ps ON ps.sale_id = s.id
+        INNER JOIN products p ON p.id = ps.product_id
+        WHERE s.sale_status_desc = 'COMPLETED'
+        AND s.created_at BETWEEN @start AND @end
+        GROUP BY p.name
+        ORDER BY TotalSold DESC
+        LIMIT 10;
+    ";
+
+        return await conn.QueryAsync<(string ProductName, decimal TotalSold)>(sql, new { start, end });
+    }
+
+    public async Task<IEnumerable<(string ChannelName, decimal TotalRevenue)>> GetTopChannelsByValueAsync(DateTime start, DateTime end)
+    {
+        using var conn = await _factory.CreateConnectionAsync();
+
+        var sql = @"
+        SELECT 
+            c.name AS ChannelName,
+            SUM(s.total_amount) AS TotalRevenue
+        FROM sales s
+        INNER JOIN channels c ON c.id = s.channel_id
+        WHERE s.sale_status_desc = 'COMPLETED'
+        AND s.created_at BETWEEN @start AND @end
+        GROUP BY c.name
+        ORDER BY TotalRevenue DESC;
+    ";
+
+        return await conn.QueryAsync<(string ChannelName, decimal TotalRevenue)>(
+            sql,
+            new { start, end }
+        );
+    }
+
+    public async Task<IEnumerable<(string ChannelName, int OrderCount)>> GetTopChannelsByQuantityAsync(DateTime start, DateTime end)
+    {
+        using var conn = await _factory.CreateConnectionAsync();
+
+        var sql = @"
+        SELECT 
+            c.name AS ChannelName,
+            COUNT(*) AS OrderCount
+        FROM sales s
+        INNER JOIN channels c ON c.id = s.channel_id
+        WHERE s.sale_status_desc = 'COMPLETED'
+        AND s.created_at BETWEEN @start AND @end
+        GROUP BY c.name
+        ORDER BY OrderCount DESC;
+    ";
+
+        return await conn.QueryAsync<(string ChannelName, int OrderCount)>(sql, new { start, end });
+    }
+
 
 
     public async Task<IEnumerable<(string Label, decimal Value)>> RunCustomQueryAsync(
@@ -97,6 +180,7 @@ public class SalesRepository : ISalesRepository
         {
             "dia" => "TO_CHAR(DATE(s.created_at), 'DD/MM/YY')",
             "mes" => "TO_CHAR(DATE_TRUNC('month', s.created_at), 'MM/YY')",
+            "produto" => "p.name",
             _ => dimension.GroupExpression
         };
 
@@ -107,15 +191,13 @@ public class SalesRepository : ISalesRepository
         FROM sales s
         LEFT JOIN stores st   ON st.id = s.store_id
         LEFT JOIN channels c  ON c.id = s.channel_id
-        WHERE s.created_at BETWEEN @start AND @end
+        LEFT JOIN product_sales ps ON ps.sale_id = s.id   -- ✅ NECESSÁRIO
+        LEFT JOIN products p  ON p.id = ps.product_id     -- ✅ NECESSÁRIO
+        WHERE s.sale_status_desc = 'COMPLETED'
+        AND s.created_at BETWEEN @start AND @end
         AND (@storeId IS NULL OR s.store_id = @storeId)
         AND (@channelId IS NULL OR s.channel_id = @channelId)
-        AND (
-            @productId IS NULL OR EXISTS (
-                SELECT 1 FROM product_sales ps 
-                WHERE ps.sale_id = s.id AND ps.product_id = @productId
-            )
-        )
+        AND (@productId IS NULL OR ps.product_id = @productId)
         GROUP BY {groupField}
         ORDER BY MIN(s.created_at);
     ";
@@ -129,6 +211,9 @@ public class SalesRepository : ISalesRepository
             productId
         });
     }
+
+
+
 
     public async Task<IEnumerable<(int Id, string Name, string Type)>> GetChannelsAsync()
     {
