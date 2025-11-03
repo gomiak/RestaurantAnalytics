@@ -23,41 +23,87 @@ public class AiInsightsService : IAiInsightsService
         _model = config["AI:Model"] ?? "gemma3:4b";
     }
 
-    public Task<string> GenerateInsightAsync(DateTime start, DateTime end, CancellationToken ct = default)
+    public async Task<string> GenerateTrendInsightAsync(Dictionary<string, decimal> dailyData)
     {
-        throw new NotImplementedException();
-    }
+        if (dailyData is null || dailyData.Count == 0)
+            return "Sem dados suficientes para gerar explicação.";
 
-    public async Task<string> GenerateTrendInsightAsync(Dictionary<DateTime, decimal> dailyRevenue)
-    {
-        var ordered = dailyRevenue.OrderBy(x => x.Key).ToList();
-        var values = string.Join(", ", ordered.Select(x => x.Value));
+        var linhas = string.Join("\n", dailyData.Select(x =>
+        {
+            var cleanDate = x.Key.Split(' ')[0];
+            return $"{cleanDate}: {x.Value}";
+        }));
+
         var prompt = $@"
-Você é um consultor financeiro explicando dados para um dono de restaurante, que não entende termos técnicos.
+Você é um consultor que explica dados para o dono de um restaurante, de forma clara, simples e direta.
 
-Você recebeu dados de faturamento por data:
-{values}
+Comece sempre com “Olá” ou “Oi”.
+Nunca use: bom dia, boa tarde, boa noite.
+Nunca mencione horário (ignore horas caso apareçam nos dados).
 
-Regras de formatação:
+Valores recebidos ao longo do tempo:
+{linhas}
+
+Regras:
+- Use exatamente as datas como estão acima (sem mudar ano).
 - Sempre use R$ antes de valores.
-- Formate valores de forma curta: 
-  - R$ 1.200 → R$ 1,2 mil
-  - R$ 450.000 → R$ 450 mil
-  - R$ 1.500.000 → R$ 1,5 milhão
-- Não use muitos números, prefira arredondar para facilitar o entendimento.
+- Formate valores:
+  • R$ 1.200 → R$ 1,2 mil
+  • R$ 450.000 → R$ 450 mil
+  • R$ 1.500.000 → R$ 1,5 milhão
 
-Tarefas:
-1. Diga se o faturamento está subindo, caindo ou está estável.
-2. Indique o maior valor e o menor valor, citando a data correspondente.
-3. Se houver diferença clara entre o início e o final, diga a variação percentual aproximada.
+Explique:
+- Qual foi o maior valor e em qual data.
+- Qual foi o menor valor e em qual data.
+- Se há tendência de alta, queda ou estabilidade no período.
 
-Responda em português simples, em até 3 frases curtas, como se estivesse conversando com o dono do restaurante.
+Responda em **até 3 frases curtas**, sem palavras difíceis.
 ";
 
-
-
-
         return await CallLlamaAsync(prompt);
+    }
+
+    public async Task<string> GenerateLabelValueInsightAsync(
+        IEnumerable<(string Label, decimal Value)> data,
+        string metricLabel,
+        string dimensionLabel,
+        CancellationToken ct = default)
+    {
+        var rows = data.ToList();
+        if (!rows.Any())
+            return "Sem dados para gerar explicação.";
+
+        var linhas = string.Join("\n", rows.Select(x =>
+        {
+            var label = x.Label.Split(' ')[0];
+            return $"{label}: {x.Value}";
+        }));
+
+        var prompt = $@"
+Você é um consultor explicando dados para o dono de um restaurante de forma objetiva.
+
+Comece com “Olá” ou “Oi”.
+Não use bom dia, boa tarde ou boa noite.
+Nunca mencione horário (ignore horas caso existam).
+
+Valores agrupados por **{dimensionLabel}**:
+{linhas}
+
+Regras:
+- Sempre cite o *nome* do produto, canal ou data exatamente como aparece acima.
+- Formate valores:
+  • R$ 1.200 → R$ 1,2 mil
+  • R$ 450.000 → R$ 450 mil
+  • R$ 1.500.000 → R$ 1,5 milhão
+
+Explique:
+- Qual teve o maior valor e qual teve o menor.
+- Se há diferença relevante entre eles.
+
+Responda em **até 3 frases**, português simples.
+";
+
+        return await CallLlamaAsync(prompt, ct);
     }
 
     private async Task<string> CallLlamaAsync(string prompt, CancellationToken ct = default)
@@ -95,49 +141,4 @@ Responda em português simples, em até 3 frases curtas, como se estivesse conve
             return $"Erro ao chamar IA: {ex.Message}";
         }
     }
-
-    public async Task<string> GenerateLabelValueInsightAsync(
-    IEnumerable<(string Label, decimal Value)> data,
-    string metricLabel,
-    string dimensionLabel,
-    CancellationToken ct = default)
-    {
-        var rows = data.ToList();
-        if (!rows.Any())
-            return "Sem dados para gerar explicação.";
-
-        var linhas = string.Join("\n", rows.Select(x => $"{x.Label} = {x.Value}"));
-
-        var prompt = $@"
-Você é um consultor financeiro explicando dados para o dono de um restaurante (sem jargões).
-
-Você recebeu uma série de valores de ""{metricLabel}"" agrupados por ""{dimensionLabel}"":
-
-{linhas}
-
-Regras de formatação:
-- Sempre use R$ antes de valores.
-- Formate de forma curta e amigável:
-  - R$ 1.200 → R$ 1,2 mil
-  - R$ 450.000 → R$ 450 mil
-  - R$ 1.500.000 → R$ 1,5 milhão
-- Cite picos (maior valor) e vales (menor valor) quando fizer sentido.
-- Se houver uma tendência clara no início vs fim, indique variação aproximada (%).
-- Explique em tom simples e direto, como se fosse para o dono do restaurante.
-
-Responda em até 3 frases curtas, em português claro.
-";
-
-        return await CallLlamaAsync(prompt, ct);
-    }
-
-
-
-    private sealed class OllamaResponse
-    {
-        public string? Model { get; set; }
-        public string? Response { get; set; }
-        public bool Done { get; set; }
-    }
-
 }
