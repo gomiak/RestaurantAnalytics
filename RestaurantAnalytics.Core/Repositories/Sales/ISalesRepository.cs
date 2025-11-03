@@ -8,6 +8,13 @@ public interface ISalesRepository
     Task<IEnumerable<Sale>> GetSalesByDateRangeAsync(DateTime start, DateTime end);
     Task<decimal> GetAverageTicketAsync(DateTime start, DateTime end);
     Task<Dictionary<DateTime, decimal>> GetDailyRevenueAsync(DateTime start, DateTime end);
+    Task<IEnumerable<(string ProductName, double QuantitySold)>> GetTopProductsByQuantityAsync(DateTime start, DateTime end);
+    Task<IEnumerable<(string ProductName, decimal TotalSold)>> GetTopProductsByValueAsync(DateTime start, DateTime end);
+    Task<IEnumerable<(string ChannelName, decimal TotalRevenue)>> GetTopChannelsByValueAsync(DateTime start, DateTime end);
+
+    Task<IEnumerable<(string ChannelName, int OrderCount)>> GetTopChannelsByQuantityAsync(DateTime start, DateTime end);
+
+
     Task<IEnumerable<(string Label, decimal Value)>> RunCustomQueryAsync(
     MetricOption metric,
     DimensionOption dimension,

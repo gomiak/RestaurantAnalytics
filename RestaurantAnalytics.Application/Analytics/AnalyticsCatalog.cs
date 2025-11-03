@@ -12,10 +12,12 @@ public static class AnalyticsCatalog
     };
 
     public static readonly List<DimensionOption> Dimensions = new()
-    {
-        new("dia", "Dia", "DATE(s.created_at)"),
-        new("mes", "Mês", "DATE_TRUNC('month', s.created_at)"),
-        new("canal", "Canal", "c.name"),
-        new("loja", "Loja", "st.name")
-    };
+{
+    new("dia", "Dia", "DATE(s.created_at)"),
+    new("mes", "Mês", "DATE_TRUNC('month', s.created_at)"),
+    new("canal", "Canal", "c.name"),
+    new("loja", "Loja", "st.name"),
+    new("produto", "Produto", "p.name")
+};
+
 }
