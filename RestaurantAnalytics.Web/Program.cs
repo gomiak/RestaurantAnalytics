@@ -15,7 +15,7 @@ builder.Services.AddScoped<IAiInsightsService, AiInsightsService>();
 
 
 
-Add MudBlazor services
+//Add MudBlazor services
 builder.Services.AddMudServices();
 builder.Services.AddMudBlazorDialog();
 builder.Services.AddMudBlazorSnackbar();
@@ -23,7 +23,7 @@ builder.Services.AddMudBlazorResizeObserver();
 
 
 
-Add services to the container.
+//Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -47,11 +47,11 @@ builder.Services.AddAuthorizationCore();
 
 var app = builder.Build();
 
-Configure the HTTP request pipeline.
+//Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-The default HSTS value is 30 days. You may want to change this for production scenarios, see https:aka.ms / aspnetcore - hsts.
+//The default HSTS value is 30 days. You may want to change this for production scenarios, see https:aka.ms / aspnetcore - hsts.
 app.UseHsts();
 }
 
