@@ -4,7 +4,7 @@ services:
     runtime: docker
     plan: free
     dockerfilePath: ./RestaurantAnalytics.Web/Dockerfile
-    envVars:
-      - key: CONNECTION_STRING
-        sync: false
     autoDeploy: true
+    envVars:
+      - key: DB_CONNECTION
+        sync: false
