@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: restaurant-analytics
+    runtime: docker
+    plan: free
+    dockerfilePath: ./RestaurantAnalytics.Web/Dockerfile
+    envVars:
+      - key: CONNECTION_STRING
+        sync: false
+    autoDeploy: true
