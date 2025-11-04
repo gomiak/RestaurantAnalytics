@@ -119,6 +119,33 @@ Variáveis obrigatórias:
 
 ---
 
+## Páginas
+
+```plaintext
+| Rota                      | Descrição                                      |
+|--------------------------|------------------------------------------------|
+| /login                   | Login simples baseado em sessão                |
+| /dashboard               | Dashboard principal com gráficos padrão        |
+| /dashboard-personalizado | Criação de dashboards customizados pelo usuário|
+```
+## Comportamento dos Gráficos
+
+Os gráficos são componentes Blazor reutilizáveis.  
+Cada um recebe parâmetros como `StartDate`, `EndDate`, `Channel` e `Metric`.
+
+As consultas são feitas via **Dapper** para garantir performance, mesmo com grandes volumes de dados.
+
+Exemplos de gráficos:
+- **Faturamento diário**
+- **Produtos mais vendidos**
+- **Canais de venda por período**
+- **Ticket médio por cliente**
+
+Todos podem ser usados na página de **Dashboard Customizável**, onde o usuário monta sua própria visualização.
+
+
+---
+
 ## Motivação
 
 Esse projeto foi feito como **desafio de aprendizado**, com foco em:
